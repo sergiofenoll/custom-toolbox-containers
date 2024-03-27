@@ -1,0 +1,32 @@
+FROM quay.io/fedora/fedora-toolbox:40
+
+ARG NAME="emacs-toolbox"
+ARG VERSION="29.3"
+
+RUN dnf -y builddep emacs
+
+COPY extra-packages /
+RUN dnf -y install $(<extra-packages)
+RUN rm /extra-packages
+
+WORKDIR /tmp/emacs-build
+RUN wget https://ftpmirror.gnu.org/emacs/emacs-${VERSION}.tar.gz
+
+RUN tar -xvf emacs-${VERSION}.tar.gz
+
+WORKDIR /tmp/emacs-build/emacs-${VERSION}
+
+RUN ./autogen.sh
+RUN ./configure \
+  --with-dbus --with-gif --with-jpeg --with-png --with-rsvg \
+  --with-tiff --with-xft --with-xpm --with-gpm=no \
+  --with-xwidgets --with-modules --with-native-compilation --with-pgtk \
+  -with-threads --with-included-regex
+RUN make -j$(nproc --ignore=2)
+RUN make install
+
+RUN rm -r /tmp/emacs-build
+
+RUN dnf clean all
+
+WORKDIR /
